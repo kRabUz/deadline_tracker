@@ -1,0 +1,56 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:14.1-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: deadline_track
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    image: deadline-track-backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: "postgresql://user:password@postgres:5432/deadline_track"
+      FLASK_DEBUG: "true"
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: deadline-track-frontend
+    volumes:
+      - ./frontend/src:/app/src
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://backend:5000
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
