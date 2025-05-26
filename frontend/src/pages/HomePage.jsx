@@ -1,213 +1,161 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
-  Box, 
-  Typography, 
-  Paper, 
-  Button, 
-  CircularProgress, 
-  Alert, 
-  Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Tabs,
-  Tab
+  Box, Typography, Paper, Button, CircularProgress, Alert, 
+  Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab 
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { SubjectForm, SubjectList, SubjectViewModal } from '../components/Subjects';
 import { TaskForm, TaskList, TaskViewModal } from '../components/Tasks';
 import { TaskViz } from '../components/Visualization';
-import { 
-  fetchSubjects, createSubject, updateSubject, deleteSubject,
-  fetchTasks, createTask, updateTask, deleteTask
-} from '../services/api';
+import { useTasks } from '../hooks/useTasks';
+import { useSubjects } from '../hooks/useSubjects';
 
-export const HomePage = () => {
+export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate, onSubjectUpdate }) => {
   const [activeTab, setActiveTab] = useState(0);
-  const [subjects, setSubjects] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState({ subjects: true, tasks: true });
   const [error, setError] = useState('');
   
-  // Стани для предметів
-  const [isSubjectDialogOpen, setIsSubjectDialogOpen] = useState(false);
+  // Subjects
+  const {
+    subjects,
+    loading: subjectsLoading,
+    createSubject,
+    updateSubject,
+    deleteSubject
+  } = useSubjects(initialSubjects, onSubjectUpdate);
+
+  // Tasks
+  const {
+    tasks,
+    loading: tasksLoading,
+    createTask,
+    updateTask,
+    deleteTask
+  } = useTasks(initialTasks, onTaskUpdate);
+
+  // UI States
   const [currentSubject, setCurrentSubject] = useState(null);
-  const [subjectToDelete, setSubjectToDelete] = useState(null);
-  const [deleteSubjectConfirmOpen, setDeleteSubjectConfirmOpen] = useState(false);
-  
-  // Стани для завдань
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState(null);
-  const [taskToDelete, setTaskToDelete] = useState(null);
-  const [deleteTaskConfirmOpen, setDeleteTaskConfirmOpen] = useState(false);
-  
-  // Стани для перегляду
   const [viewSubject, setViewSubject] = useState(null);
   const [viewTask, setViewTask] = useState(null);
+  const [isSubjectDialogOpen, setIsSubjectDialogOpen] = useState(false);
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isViewSubjectOpen, setIsViewSubjectOpen] = useState(false);
   const [isViewTaskOpen, setIsViewTaskOpen] = useState(false);
-  
-  // Стани для сповіщень
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [subjectToDelete, setSubjectToDelete] = useState(null);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [deleteSubjectConfirmOpen, setDeleteSubjectConfirmOpen] = useState(false);
+  const [deleteTaskConfirmOpen, setDeleteTaskConfirmOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
-  // Завантаження даних
-  const loadSubjects = async () => {
-    setLoading(prev => ({ ...prev, subjects: true }));
-    try {
-      const res = await fetchSubjects();
-      setSubjects(res.data.map(subj => ({
-        id: subj.id,
-        name: subj.name || 'Без назви'
-      })));
-      setError('');
-    } catch (err) {
-      setError('Не вдалося завантажити предмети');
-      console.error(err);
-    } finally {
-      setLoading(prev => ({ ...prev, subjects: false }));
-    }
-  };
-
-  const loadTasks = async () => {
-    setLoading(prev => ({ ...prev, tasks: true }));
-    try {
-      const res = await fetchTasks();
-      setTasks(res.data.map(task => ({
-        id: task.id,
-        task_name: task.task_name || 'Без назви',
-        subject_id: task.subject_id,
-        priority: task.priority || 'Low',
-        difficulty: task.difficulty || 'Medium',
-        deadline: task.deadline || new Date().toISOString().split('T')[0],
-        subject_name: subjects.find(s => s.id === task.subject_id)?.name
-      })));
-      setError('');
-    } catch (err) {
-      setError('Не вдалося завантажити завдання');
-      console.error(err);
-    } finally {
-      setLoading(prev => ({ ...prev, tasks: false }));
-    }
-  };
-
-  useEffect(() => {
-    loadSubjects();
-  }, []);
-
-  useEffect(() => {
-    if (subjects.length > 0) {
-      loadTasks();
-    }
-  }, [subjects]);
-
-  // Обробники для предметів
-  const handleOpenSubjectDialog = (subject = null) => {
+  // Subject Handlers
+  const handleOpenSubjectDialog = useCallback((subject = null) => {
     setCurrentSubject(subject);
     setIsSubjectDialogOpen(true);
-  };
+  }, []);
 
-const handleSubmitSubject = async (subjectData) => {
-  try {
-    const res = await (currentSubject 
-      ? updateSubject(currentSubject.id, subjectData) 
-      : createSubject(subjectData));
-    
-    const updatedSubject = {
-      id: currentSubject ? currentSubject.id : res.data.id,
-      name: subjectData.name
-    };
-    
-    setSubjects(prev => currentSubject
-      ? prev.map(s => s.id === currentSubject.id ? updatedSubject : s)
-      : [...prev, updatedSubject]);
-    
-    setSnackbarMessage(`Предмет ${currentSubject ? 'оновлено' : 'додано'}`);
+  const handleCloseSubjectDialog = useCallback(() => {
     setIsSubjectDialogOpen(false);
-    setCurrentSubject(null); // Скидаємо поточний предмет
-    setSnackbarOpen(true);
-    loadTasks(); // Оновити завдання, оскільки вони залежать від предметів
-  } catch (err) {
-    setError(`Помилка: ${err.response?.data?.error || err.message}`);
-  }
-};
+    setCurrentSubject(null);
+  }, []);
 
-  const handleDeleteSubject = async () => {
+  const handleSubmitSubject = useCallback(async (subjectData) => {
+    try {
+      if (currentSubject) {
+        await updateSubject(currentSubject.id, subjectData);
+      } else {
+        await createSubject(subjectData);
+      }
+      setIsSubjectDialogOpen(false);
+    } catch (err) {
+      setError(`Помилка: ${err.response?.data?.error || err.message}`);
+    }
+  }, [currentSubject, createSubject, updateSubject]);
+
+  const handleRequestDeleteSubject = useCallback((id) => {
+    setSubjectToDelete(id);
+    setDeleteSubjectConfirmOpen(true);
+  }, []);
+
+  const handleDeleteSubject = useCallback(async () => {
     try {
       await deleteSubject(subjectToDelete);
-      setSubjects(subjects.filter(subj => subj.id !== subjectToDelete));
-      setSnackbarMessage('Предмет успішно видалено');
       setDeleteSubjectConfirmOpen(false);
-      setSnackbarOpen(true);
-      loadTasks(); // Оновити завдання після видалення предмету
+      setSnackbar({ open: true, message: 'Предмет видалено' });
     } catch (err) {
       setError(`Помилка: ${err.response?.data?.error || err.message}`);
-      setDeleteSubjectConfirmOpen(false);
     }
-  };
+  }, [subjectToDelete, deleteSubject]);
 
-  // Обробники для завдань
-  const handleOpenTaskDialog = (task = null) => {
+  // Task Handlers
+  const handleOpenTaskDialog = useCallback((task = null) => {
     setCurrentTask(task);
     setIsTaskDialogOpen(true);
-  };
+  }, []);
 
-const handleSubmitTask = async (taskData) => {
-  try {
-    const res = await (currentTask
-      ? updateTask(currentTask.id, taskData)
-      : createTask(taskData));
-    
-    const updatedTask = {
-      id: currentTask ? currentTask.id : res.data.id,
-      task_name: taskData.task_name,
-      subject_id: taskData.subject_id,
-      subject_name: subjects.find(s => s.id === taskData.subject_id)?.name,
-      priority: taskData.priority || 'Low',
-      difficulty: taskData.difficulty || 'Medium',
-      deadline: taskData.deadline
-    };
-    
-    setTasks(prev => currentTask
-      ? prev.map(t => t.id === currentTask.id ? updatedTask : t)
-      : [...prev, updatedTask]);
-    
-    setSnackbarMessage(`Завдання ${currentTask ? 'оновлено' : 'додано'}`);
+  const handleCloseTaskDialog = useCallback(() => {
     setIsTaskDialogOpen(false);
-    setCurrentTask(null); // Скидаємо поточне завдання
-    setSnackbarOpen(true);
-  } catch (err) {
-    setError(`Помилка: ${err.response?.data?.error || err.message}`);
-  }
-};
+    setCurrentTask(null);
+  }, []);
 
-  const handleDeleteTask = async () => {
+  const handleSubmitTask = useCallback(async (taskData) => {
     try {
-      await deleteTask(taskToDelete);
-      setTasks(tasks.filter(task => task.id !== taskToDelete));
-      setSnackbarMessage('Завдання успішно видалено');
-      setDeleteTaskConfirmOpen(false);
-      setSnackbarOpen(true);
+      if (currentTask) {
+        await updateTask(currentTask.id, taskData);
+      } else {
+        await createTask(taskData);
+      }
+      setIsTaskDialogOpen(false);
     } catch (err) {
       setError(`Помилка: ${err.response?.data?.error || err.message}`);
-      setDeleteTaskConfirmOpen(false);
     }
-  };
+  }, [currentTask, createTask, updateTask]);
 
-  const handleCloseSubjectDialog = () => {
-    setIsSubjectDialogOpen(false);
-    setCurrentSubject(null); // Скидаємо поточний предмет
-  };
+  const handleRequestDeleteTask = useCallback((id) => {
+    setTaskToDelete(id);
+    setDeleteTaskConfirmOpen(true);
+  }, []);
 
-  const handleCloseTaskDialog = () => {
-    setIsTaskDialogOpen(false);
-    setCurrentTask(null); // Скидаємо поточне завдання
-  };
+  const handleDeleteTask = useCallback(async () => {
+    try {
+      await deleteTask(taskToDelete);
+      setDeleteTaskConfirmOpen(false);
+      setSnackbar({ open: true, message: 'Завдання видалено' });
+    } catch (err) {
+      setError(`Помилка: ${err.response?.data?.error || err.message}`);
+    }
+  }, [taskToDelete, deleteTask]);
 
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
+  // View Handlers
+  const handleViewSubject = useCallback((subject) => {
+    setViewSubject(subject);
+    setIsViewSubjectOpen(true);
+  }, []);
+
+  const handleViewTask = useCallback((task) => {
+    setViewTask(task);
+    setIsViewTaskOpen(true);
+  }, []);
+
+  const handleCloseViewSubject = useCallback(() => {
+    setIsViewSubjectOpen(false);
+  }, []);
+
+  const handleCloseViewTask = useCallback(() => {
+    setIsViewTaskOpen(false);
+  }, []);
+
+  // UI Handlers
+  const handleTabChange = useCallback((event, newValue) => {
+    setActiveTab(newValue);
+  }, []);
+
+  const handleCloseSnackbar = useCallback(() => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  }, []);
+
+  const handleCloseError = useCallback(() => {
+    setError('');
+  }, []);
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }}>
@@ -215,24 +163,24 @@ const handleSubmitTask = async (taskData) => {
         Управління навчанням
       </Typography>
 
-    <Button 
-      component={Link}
-      to="/calendar"
-      variant="outlined"
-      sx={{ mb: 3, mr: 2 }}
-    >
-      Перейти до календаря
-    </Button>
+      <Button 
+        component={Link}
+        to="/calendar"
+        variant="outlined"
+        sx={{ mb: 3, mr: 2 }}
+      >
+        Перейти до календаря
+      </Button>
 
       <TaskViz tasks={tasks} />
 
-      <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
+      <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
         <Tab label="Предмети" />
         <Tab label="Завдання" />
       </Tabs>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={handleCloseError}>
           {error}
         </Alert>
       )}
@@ -247,7 +195,7 @@ const handleSubmitTask = async (taskData) => {
             Додати предмет
           </Button>
 
-          {loading.subjects ? (
+          {subjectsLoading ? (
             <Box display="flex" justifyContent="center">
               <CircularProgress />
             </Box>
@@ -255,15 +203,9 @@ const handleSubmitTask = async (taskData) => {
             <Paper elevation={3} sx={{ p: 2 }}>
               <SubjectList 
                 subjects={subjects} 
-                onView={(subject) => {
-                  setViewSubject(subject);
-                  setIsViewSubjectOpen(true);
-                }}
+                onView={handleViewSubject}
                 onEdit={handleOpenSubjectDialog}
-                onDelete={(id) => {
-                  setSubjectToDelete(id);
-                  setDeleteSubjectConfirmOpen(true);
-                }}
+                onDelete={handleRequestDeleteSubject}
               />
             </Paper>
           )}
@@ -285,7 +227,7 @@ const handleSubmitTask = async (taskData) => {
             </Alert>
           )}
 
-          {loading.tasks ? (
+          {tasksLoading ? (
             <Box display="flex" justifyContent="center">
               <CircularProgress />
             </Box>
@@ -294,25 +236,19 @@ const handleSubmitTask = async (taskData) => {
               <TaskList 
                 tasks={tasks} 
                 subjects={subjects}
-                onView={(task) => {
-                  setViewTask(task);
-                  setIsViewTaskOpen(true);
-                }}
+                onView={handleViewTask}
                 onEdit={handleOpenTaskDialog}
-                onDelete={(id) => {
-                  setTaskToDelete(id);
-                  setDeleteTaskConfirmOpen(true);
-                }}
+                onDelete={handleRequestDeleteTask}
               />
             </Paper>
           )}
         </>
       )}
 
-      {/* Діалоги для предметів */}
+      {/* Модалки предметів */}
       <SubjectForm
         open={isSubjectDialogOpen}
-        onClose={handleCloseSubjectDialog}  // Замінити стару функцію на нову
+        onClose={handleCloseSubjectDialog}
         onSubmit={handleSubmitSubject}
         editSubject={currentSubject}
       />
@@ -337,10 +273,10 @@ const handleSubmitTask = async (taskData) => {
         </DialogActions>
       </Dialog>
 
-      {/* Діалоги для завдань */}
+      {/* Модалки завдань */}
       <TaskForm
         open={isTaskDialogOpen}
-        onClose={handleCloseTaskDialog}  // Замінити стару функцію на нову
+        onClose={handleCloseTaskDialog}
         onSubmit={handleSubmitTask}
         task={currentTask}
         subjects={subjects}
@@ -369,42 +305,40 @@ const handleSubmitTask = async (taskData) => {
       {/* Модалки перегляду */}
       <SubjectViewModal
         open={isViewSubjectOpen}
-        onClose={() => setIsViewSubjectOpen(false)}
+        onClose={handleCloseViewSubject}
         subject={viewSubject}
         tasks={tasks}
         onEdit={() => {
           handleOpenSubjectDialog(viewSubject);
-          setIsViewSubjectOpen(false);
+          handleCloseViewSubject();
         }}
         onDelete={() => {
-          setSubjectToDelete(viewSubject.id);
-          setDeleteSubjectConfirmOpen(true);
-          setIsViewSubjectOpen(false);
+          handleRequestDeleteSubject(viewSubject.id);
+          handleCloseViewSubject();
         }}
       />
 
       <TaskViewModal
         open={isViewTaskOpen}
-        onClose={() => setIsViewTaskOpen(false)}
+        onClose={handleCloseViewTask}
         task={viewTask}
         subjects={subjects}
         onEdit={() => {
           handleOpenTaskDialog(viewTask);
-          setIsViewTaskOpen(false);
+          handleCloseViewTask();
         }}
         onDelete={() => {
-          setTaskToDelete(viewTask.id);
-          setDeleteTaskConfirmOpen(true);
-          setIsViewTaskOpen(false);
+          handleRequestDeleteTask(viewTask.id);
+          handleCloseViewTask();
         }}
       />
 
       {/* Сповіщення */}
       <Snackbar
-        open={snackbarOpen}
+        open={snackbar.open}
         autoHideDuration={3000}
         onClose={handleCloseSnackbar}
-        message={snackbarMessage}
+        message={snackbar.message}
       />
     </Box>
   );

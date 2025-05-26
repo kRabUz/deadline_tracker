@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchTasks } from './services/api';
+import { fetchTasks, fetchSubjects } from './services/api';
 import { AppRoutes } from './routes';
 
 function App() {
@@ -7,18 +7,47 @@ function App() {
   const [subjects, setSubjects] = useState([]);
 
   useEffect(() => {
-    const loadTasks = async () => {
+    const loadData = async () => {
       try {
-        const res = await fetchTasks();
-        setTasks(res.data);
+        const [tasksRes, subjectsRes] = await Promise.all([
+          fetchTasks(),
+          fetchSubjects()
+        ]);
+        setTasks(tasksRes.data);
+        setSubjects(subjectsRes.data);
       } catch (err) {
-        console.error('Failed to load tasks:', err);
+        console.error('Failed to load data:', err);
       }
     };
-    loadTasks();
+    loadData();
   }, []);
 
-  return <AppRoutes tasks={tasks} />;
+  const handleTaskUpdate = async () => {
+    try {
+      const tasksRes = await fetchTasks();
+      setTasks(tasksRes.data);
+    } catch (err) {
+      console.error('Failed to update tasks:', err);
+    }
+  };
+
+  const handleSubjectUpdate = async () => {
+    try {
+      const subjectsRes = await fetchSubjects();
+      setSubjects(subjectsRes.data);
+    } catch (err) {
+      console.error('Failed to update subjects:', err);
+    }
+  };
+
+  return (
+    <AppRoutes 
+      tasks={tasks} 
+      subjects={subjects} 
+      onTaskUpdate={handleTaskUpdate}
+      onSubjectUpdate={handleSubjectUpdate}
+    />
+  );
 }
 
 export default App;

@@ -1,47 +1,89 @@
-import React from 'react';
+import React, { useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useTheme } from '@mui/material';
-import { TaskViewModal } from '../components/Tasks/TaskViewModal';
+import { useNavigate } from 'react-router-dom';
+import { TaskViewModal, TaskForm } from '../components/Tasks';
+import { Button, Box, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useTasks } from '../hooks/useTasks';
 
-export const CalendarPage = ({ tasks = [] }) => {
+export const CalendarPage = ({ initialTasks = [], subjects = [], onTaskUpdate }) => {
   const theme = useTheme();
-  const [selectedTask, setSelectedTask] = React.useState(null);
-  const [modalOpen, setModalOpen] = React.useState(false);
+  const navigate = useNavigate();
+  
+  const {
+    tasks,
+    updateTask,
+    deleteTask
+  } = useTasks(initialTasks, onTaskUpdate);
 
-  // Функція для отримання кольору за пріоритетом
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
   const getPriorityColor = (priority) => {
     switch(priority) {
-      case 'High': 
-        return theme.palette.error.main;
-      case 'Medium':
-        return theme.palette.warning.main;
-      case 'Low':
-      default:
-        return theme.palette.success.main;
+      case 'High': return theme.palette.error.main;
+      case 'Medium': return theme.palette.warning.main;
+      case 'Low': default: return theme.palette.success.main;
     }
   };
 
-  // Форматуємо завдання для календаря
   const events = tasks.map(task => ({
     id: task.id,
     title: task.task_name || 'Без назви',
     start: task.deadline,
     allDay: true,
-    color: getPriorityColor(task.priority || 'Low'), // Використовуємо функцію
-    extendedProps: {
-      ...task
-    }
+    color: getPriorityColor(task.priority || 'Low'),
+    extendedProps: { ...task }
   }));
 
   const handleEventClick = (clickInfo) => {
     setSelectedTask(clickInfo.event.extendedProps);
-    setModalOpen(true);
+    setViewModalOpen(true);
+  };
+
+  const handleEdit = () => {
+    setViewModalOpen(false);
+    setEditModalOpen(true);
+  };
+
+  const handleSubmitEdit = async (taskData) => {
+    try {
+      await updateTask(selectedTask.id, taskData);
+      setEditModalOpen(false);
+    } catch (error) {
+      console.error('Помилка оновлення:', error);
+    }
+  };
+
+  const handleDelete = () => {
+    setViewModalOpen(false);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteTask(selectedTask.id);
+      setDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error('Помилка видалення:', error);
+    }
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <Box sx={{ p: 3 }}>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate('/')}
+        sx={{ mb: 2 }}
+      >
+        На головну
+      </Button>
+
       <FullCalendar
         plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
@@ -54,21 +96,48 @@ export const CalendarPage = ({ tasks = [] }) => {
         }}
         height="auto"
       />
-      
+
+      {/* Модалка перегляду */}
       <TaskViewModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        open={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
         task={selectedTask}
-        subjects={[]} // Потрібно передати актуальний список предметів
-        onEdit={() => {
-          // Логіка редагування
-          setModalOpen(false);
-        }}
-        onDelete={() => {
-          // Логіка видалення
-          setModalOpen(false);
-        }}
+        subjects={subjects}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
       />
-    </div>
+
+      {/* Модалка редагування */}
+      {selectedTask && (
+        <TaskForm
+          open={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          onSubmit={handleSubmitEdit}
+          task={selectedTask}
+          subjects={subjects}
+        />
+      )}
+
+      {/* Підтвердження видалення */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+      >
+        <DialogTitle>Підтвердити видалення</DialogTitle>
+        <DialogContent>
+          Ви впевнені, що хочете видалити завдання "{selectedTask?.task_name}"?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>Скасувати</Button>
+          <Button 
+            onClick={confirmDelete} 
+            color="error"
+            variant="contained"
+          >
+            Видалити
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
