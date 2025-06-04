@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, MenuItem, FormControl, InputLabel, Select
+  TextField, Button, MenuItem, FormControl, InputLabel, Select,
+  Box
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -24,7 +25,6 @@ export const TaskForm = ({
 }) => {
   const [formData, setFormData] = useState(emptyFormData);
 
-  // Очищаємо або заповнюємо форму при відкритті/закритті
   useEffect(() => {
     if (open) {
       if (task) {
@@ -46,17 +46,17 @@ export const TaskForm = ({
 
   const handleSubmit = () => {
     if (!formData.task_name.trim() || !formData.subject_id) {
-      return; // Проста валідація
+      return;
     }
 
     onSubmit({
       ...formData,
-      deadline: formData.deadline.toISOString().split('T')[0] // Форматуємо дату
+      deadline: formData.deadline.toISOString().split('T')[0]
     });
   };
 
   const handleClose = () => {
-    setFormData(emptyFormData); // Очищаємо форму при закритті
+    setFormData(emptyFormData);
     onClose();
   };
 
@@ -65,69 +65,82 @@ export const TaskForm = ({
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>{task ? 'Редагувати завдання' : 'Додати завдання'}</DialogTitle>
         <DialogContent>
-          <TextField
-            margin="dense"
-            label="Назва завдання *"
-            fullWidth
-            value={formData.task_name}
-            onChange={(e) => setFormData({...formData, task_name: e.target.value})}
-            sx={{ mt: 2 }}
-            required
-          />
-          
-          <FormControl fullWidth margin="normal" required>
-            <InputLabel>Предмет *</InputLabel>
-            <Select
-              value={formData.subject_id}
-              onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
-              disabled={subjects.length === 0}
-            >
-              {subjects.map((subject) => (
-                <MenuItem key={subject.id} value={subject.id}>
-                  {subject.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box sx={{ mb: 1 }}>
+            <TextField
+              label="Назва завдання *"
+              fullWidth
+              value={formData.task_name}
+              onChange={(e) => setFormData({...formData, task_name: e.target.value})}
+              required
+              variant="outlined"
+              margin="normal"
+            />
+          </Box>
 
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Пріоритет</InputLabel>
-            <Select
-              value={formData.priority}
-              onChange={(e) => setFormData({...formData, priority: e.target.value})}
-            >
-              <MenuItem value="Low">Низький</MenuItem>
-              <MenuItem value="High">Високий</MenuItem>
-            </Select>
-          </FormControl>
+          <Box sx={{ mb: 1 }}>
+            <FormControl fullWidth variant="outlined" margin="normal" required>
+              <InputLabel>Предмет *</InputLabel>
+              <Select
+                value={formData.subject_id}
+                onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
+                disabled={subjects.length === 0}
+                label="Предмет *"
+              >
+                {subjects.map((subject) => (
+                  <MenuItem key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
 
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Складність</InputLabel>
-            <Select
-              value={formData.difficulty}
-              onChange={(e) => setFormData({...formData, difficulty: e.target.value})}
-            >
-              <MenuItem value="Easy">Легка</MenuItem>
-              <MenuItem value="Medium">Середня</MenuItem>
-              <MenuItem value="Hard">Складна</MenuItem>
-            </Select>
-          </FormControl>
+          <Box sx={{ mb: 1 }}>
+            <FormControl fullWidth variant="outlined" margin="normal">
+              <InputLabel>Пріоритет</InputLabel>
+              <Select
+                value={formData.priority}
+                onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                label="Пріоритет"
+              >
+                <MenuItem value="Low">Низький</MenuItem>
+                <MenuItem value="High">Високий</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
 
-          <DesktopDatePicker
-            label="Дедлайн *"
-            value={formData.deadline}
-            onChange={(newValue) => setFormData({...formData, deadline: newValue || new Date()})}
-            renderInput={(params) => (
-              <TextField 
-                {...params} 
-                fullWidth 
-                margin="normal" 
-                sx={{ mt: 2 }}
-                required
-              />
-            )}
-            minDate={new Date()}
-          />
+          <Box sx={{ mb: 1 }}>
+            <FormControl fullWidth variant="outlined" margin="normal">
+              <InputLabel>Складність</InputLabel>
+              <Select
+                value={formData.difficulty}
+                onChange={(e) => setFormData({...formData, difficulty: e.target.value})}
+                label="Складність"
+              >
+                <MenuItem value="Easy">Легка</MenuItem>
+                <MenuItem value="Medium">Середня</MenuItem>
+                <MenuItem value="Hard">Складна</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Box sx={{ mb: 1 }}>
+            <DesktopDatePicker
+              label="Дедлайн *"
+              value={formData.deadline}
+              onChange={(newValue) => setFormData({...formData, deadline: newValue || new Date()})}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  fullWidth 
+                  variant="outlined"
+                  margin="normal"
+                  required
+                />
+              )}
+              minDate={new Date()}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Скасувати</Button>

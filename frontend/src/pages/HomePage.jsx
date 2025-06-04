@@ -21,37 +21,61 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
   const {
     subjects,
     loading: subjectsLoading,
+    error: subjectsError,
     createSubject,
     updateSubject,
-    deleteSubject
+    deleteSubject,
+    loadSubjects
   } = useSubjects(initialSubjects, onSubjectUpdate);
 
-  // Tasks
+  // Tasks with toggle complete functionality
   const {
     tasks,
     loading: tasksLoading,
+    error: tasksError,
     createTask,
     updateTask,
-    deleteTask
+    deleteTask,
+    toggleTaskStatus,
+    loadTasks
   } = useTasks(initialTasks, onTaskUpdate);
 
   const handleDeleteSubject = useCallback(async (id) => {
     try {
       await deleteSubject(id);
-      setSnackbar({ open: true, message: 'Предмет видалено' });
+      setSnackbar({ open: true, message: 'Предмет успішно видалено' });
+      loadTasks(); // Refresh tasks after subject deletion
     } catch (err) {
-      setError(`Помилка: ${err.response?.data?.error || err.message}`);
+      setError(`Помилка при видаленні предмету: ${err.response?.data?.error || err.message}`);
     }
-  }, [deleteSubject]);
+  }, [deleteSubject, loadTasks]);
 
   const handleDeleteTask = useCallback(async (id) => {
     try {
       await deleteTask(id);
-      setSnackbar({ open: true, message: 'Завдання видалено' });
+      setSnackbar({ open: true, message: 'Завдання успішно видалено' });
     } catch (err) {
-      setError(`Помилка: ${err.response?.data?.error || err.message}`);
+      setError(`Помилка при видаленні завдання: ${err.response?.data?.error || err.message}`);
     }
   }, [deleteTask]);
+
+  const handleToggleComplete = useCallback(async (taskId, isCompleted) => {
+    try {
+      await toggleTaskStatus(taskId, isCompleted);
+      const statusText = isCompleted ? 'виконаним' : 'невиконаним';
+      setSnackbar({ open: true, message: `Завдання позначено як ${statusText}` });
+    } catch (err) {
+      setError(`Помилка при зміні статусу: ${err.response?.data?.error || err.message}`);
+    }
+  }, [toggleTaskStatus]);
+
+  const handleCloseError = useCallback(() => {
+    setError('');
+  }, []);
+
+  const handleCloseSnackbar = useCallback(() => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  }, []);
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }}>
@@ -82,13 +106,31 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
         </Button>
       </Box>
 
-      <TaskViz tasks={tasks} />
+      {(subjectsLoading || tasksLoading) && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {subjectsError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={handleCloseError}>
+          {subjectsError}
+        </Alert>
+      )}
+
+      {tasksError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={handleCloseError}>
+          {tasksError}
+        </Alert>
+      )}
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={handleCloseError}>
           {error}
         </Alert>
       )}
+
+      <TaskViz tasks={tasks} subjects={subjects} />
 
       <SubjectsManager
         open={subjectsModalOpen}
@@ -98,6 +140,7 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
         onCreate={createSubject}
         onUpdate={updateSubject}
         onDelete={handleDeleteSubject}
+        loading={subjectsLoading}
       />
 
       <TasksManager
@@ -108,12 +151,14 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
         onCreate={createTask}
         onUpdate={updateTask}
         onDelete={handleDeleteTask}
+        onToggleComplete={handleToggleComplete}
+        loading={tasksLoading}
       />
 
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        onClose={handleCloseSnackbar}
         message={snackbar.message}
       />
     </Box>

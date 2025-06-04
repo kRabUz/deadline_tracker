@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'; // Додано useEffect
+import { useState, useEffect, useCallback } from 'react';
 import { 
   fetchTasks, 
   createTask, 
   updateTask, 
-  deleteTask 
+  deleteTask,
+  toggleTaskStatus
 } from '../services/taskService';
 
 export const useTasks = (initialTasks = [], onUpdate) => {
@@ -11,15 +12,14 @@ export const useTasks = (initialTasks = [], onUpdate) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Додано ефект для синхронізації стану
   useEffect(() => {
     setTasks(initialTasks);
   }, [initialTasks]);
 
-  const loadTasks = useCallback(async () => {
+  const loadTasks = useCallback(async (completed) => {
     try {
       setLoading(true);
-      const data = await fetchTasks();
+      const data = await fetchTasks(completed);
       setTasks(data);
     } catch (err) {
       setError(err);
@@ -61,6 +61,17 @@ export const useTasks = (initialTasks = [], onUpdate) => {
     }
   }, [onUpdate]);
 
+  const handleToggleComplete = useCallback(async (id, isCompleted) => {
+    try {
+      const updatedTask = await toggleTaskStatus(id, isCompleted);
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+      onUpdate?.();
+    } catch (err) {
+      setError(err);
+      throw err;
+    }
+  }, [onUpdate]);
+
   return {
     tasks,
     loading,
@@ -68,6 +79,7 @@ export const useTasks = (initialTasks = [], onUpdate) => {
     loadTasks,
     createTask: handleCreate,
     updateTask: handleUpdate,
-    deleteTask: handleDelete
+    deleteTask: handleDelete,
+    toggleTaskStatus: handleToggleComplete
   };
 };

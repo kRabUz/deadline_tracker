@@ -185,7 +185,7 @@ export const TaskList = ({ tasks = [], subjects = [], onView }) => {
         </Table>
       </TableContainer>
       <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[5, 10, 20]}
         component="div"
         count={tasks.length}
         rowsPerPage={rowsPerPage}

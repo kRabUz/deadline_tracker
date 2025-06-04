@@ -7,6 +7,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export const TaskViz = ({ tasks }) => {
   const theme = useTheme();
 
+  // Фільтруємо тільки невиконані завдання
+  const filteredTasks = tasks.filter(task => !task.is_completed);
+
   const getToday = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -56,8 +59,8 @@ export const TaskViz = ({ tasks }) => {
 
     return days.map(day => {
       const dayTasks = day.isOverdue
-        ? tasks.filter(task => isOverdue(task.deadline))
-        : tasks.filter(task => {
+        ? filteredTasks.filter(task => isOverdue(task.deadline))
+        : filteredTasks.filter(task => {
             const taskDate = new Date(task.deadline);
             taskDate.setHours(0, 0, 0, 0);
             return taskDate.getTime() === day.date.getTime();
@@ -105,6 +108,9 @@ export const TaskViz = ({ tasks }) => {
               {entry.value} завдань
             </Typography>
           ))}
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Всього: {data.total}
+          </Typography>
         </Paper>
       );
     }
@@ -115,12 +121,12 @@ export const TaskViz = ({ tasks }) => {
     <Paper elevation={3} sx={{ 
       p: 3, 
       mb: 4,
-      width: '60%',       // Зменшена ширина до 2/3
-      mx: 'left',         // Центрування
-      minWidth: 500       // Мінімальна ширина
+      width: '60%',
+      mx: 'auto',
+      minWidth: 500
     }}>
       <Typography variant="h6" gutterBottom>
-        Розподіл завдань
+        Розподіл невиконаних завдань
       </Typography>
       
       <Box sx={{ 
