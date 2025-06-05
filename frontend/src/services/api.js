@@ -119,4 +119,34 @@ export const deleteTask = async (id) => {
   }
 };
 
+// TOPSIS API
+export const getRecommendations = async (weights = [0.2, 0.2, 0.6], directions = ['max', 'max', 'min']) => {
+  try {
+    const weightsStr = weights.join(',');
+    const directionsStr = directions.join(',');
+    
+    const response = await api.get('/tasks/recommendations', {
+      params: { 
+        weights: weightsStr,
+        directions: directionsStr
+      }
+    });
+    
+    return {
+      ...response,
+      data: {
+        parameters: response.data.parameters || {
+          weights: weights,
+          criteria_directions: directions,
+          criteria_names: ["priority", "difficulty", "deadline"]
+        },
+        tasks: response.data.tasks || []
+      }
+    };
+  } catch (error) {
+    console.error('Error getting TOPSIS recommendations:', error);
+    throw error;
+  }
+};
+
 export default api;

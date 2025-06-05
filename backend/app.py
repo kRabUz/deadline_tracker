@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
@@ -247,6 +248,122 @@ def delete_subject(subject_id):
         return jsonify({"message": "Subject and related tasks deleted"}), 200
     except Exception as e:
         db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/tasks/recommendations", methods=["GET"])
+def get_recommendations():
+    """Отримати невиконані завдання, відсортовані за методом TOPSIS з налаштуваннями"""
+    try:
+        # Параметри за замовчуванням
+        default_weights = "0.2,0.2,0.6"
+        default_directions = "max,max,min"  # Пріоритет↑, Складність↑, Дедлайн↓
+
+        # Отримуємо параметри з фронтенду
+        weights_param = request.args.get("weights", default_weights)
+        directions_param = request.args.get("directions", default_directions)
+
+        # Обробка ваг
+        try:
+            weights = [float(w) for w in weights_param.split(",")]
+            if len(weights) != 3 or not all(w >= 0 for w in weights):
+                raise ValueError
+            weights = np.array(weights) / sum(weights)  # Нормалізація
+        except ValueError:
+            return jsonify({
+                "error": "Invalid weights format. Use three comma-separated numbers, e.g. 0.2,0.2,0.6",
+                "example": default_weights
+            }), 400
+
+        # Обробка напрямків оптимізації
+        try:
+            directions = []
+            for d in directions_param.split(","):
+                if d.strip().lower() == "min":
+                    directions.append(-1)
+                else:  # default to max
+                    directions.append(+1)
+            if len(directions) != 3:
+                raise ValueError
+            criteria_directions = np.array(directions)
+        except ValueError:
+            return jsonify({
+                "error": "Invalid directions format. Use three comma-separated values (min/max), e.g. max,min,min",
+                "example": default_directions
+            }), 400
+
+        # Отримуємо тільки активні завдання
+        tasks = TaskList.query.filter_by(is_completed=False).all()
+        
+        if not tasks:
+            return jsonify([])
+        
+        # Поточний час для розрахунку годин до дедлайну
+        now = datetime.now()
+        
+        # Готуємо матрицю рішень
+        decision_matrix = []
+        for task in tasks:
+            # Пріоритет: Low=1, High=2
+            priority = 1 if task.priority == "Low" else 2
+            
+            # Складність: Easy=1, Medium=3, Hard=5
+            difficulty_map = {"Easy": 1, "Medium": 3, "Hard": 5}
+            difficulty = difficulty_map[task.difficulty]
+            
+            # Години до дедлайну
+            deadline_dt = datetime.combine(task.deadline, datetime.min.time())
+            hours_left = max(0, (deadline_dt - now).total_seconds() / 3600)
+            
+            decision_matrix.append([priority, difficulty, hours_left])
+        
+        # TOPSIS алгоритм
+        decision_matrix = np.array(decision_matrix)
+        norm_matrix = decision_matrix / np.sqrt((decision_matrix ** 2).sum(axis=0))
+        weighted_matrix = norm_matrix * weights
+        
+        # Ідеальне та найгірше рішення (з урахуванням напрямків)
+        PIS = np.where(criteria_directions == 1, 
+                      weighted_matrix.max(axis=0),
+                      weighted_matrix.min(axis=0))
+        NIS = np.where(criteria_directions == 1,
+                      weighted_matrix.min(axis=0),
+                      weighted_matrix.max(axis=0))
+        
+        # Розраховуємо відстані та рейтинг
+        dist_to_PIS = np.sqrt(((weighted_matrix - PIS) ** 2).sum(axis=1))
+        dist_to_NIS = np.sqrt(((weighted_matrix - NIS) ** 2).sum(axis=1))
+        closeness = dist_to_NIS / (dist_to_PIS + dist_to_NIS + 1e-10)
+        
+        # Сортуємо завдання
+        sorted_tasks = sorted(zip(tasks, closeness), key=lambda x: x[1], reverse=True)
+        
+        # Формуємо відповідь
+        result = {
+            "parameters": {
+                "weights": [float(w) for w in weights],
+                "criteria_directions": ["max" if d == 1 else "min" for d in criteria_directions],
+                "criteria_names": ["priority", "difficulty", "deadline"]
+            },
+            "tasks": []
+        }
+        
+        for task, score in sorted_tasks:
+            task_data = {
+                "id": task.id,
+                "task_name": task.task_name,
+                "subject_id": task.subject_id,
+                "subject": task.subject.name,
+                "priority": task.priority,
+                "difficulty": task.difficulty,
+                "deadline": task.deadline.isoformat(),
+                "hours_until_deadline": round((datetime.combine(task.deadline, datetime.min.time()) - now).total_seconds() / 3600, 1),
+                "topsis_score": round(float(score), 4)
+            }
+            result["tasks"].append(task_data)
+        
+        return jsonify(result)
+        
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ========= Запуск =========

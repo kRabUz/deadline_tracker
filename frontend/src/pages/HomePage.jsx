@@ -9,12 +9,14 @@ import { useTasks } from '../hooks/useTasks';
 import { useSubjects } from '../hooks/useSubjects';
 import { SubjectsManager } from '../components/Subjects/SubjectsManager';
 import { TasksManager } from '../components/Tasks/TasksManager';
+import { RecommendationsManager } from '../components/Tasks/RecommendationsManager'; // Імпортуємо новий компонент
 
 export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate, onSubjectUpdate }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [error, setError] = useState('');
   const [subjectsModalOpen, setSubjectsModalOpen] = useState(false);
   const [tasksModalOpen, setTasksModalOpen] = useState(false);
+  const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false); // Новий стан для Recommendations
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
   // Subjects
@@ -104,6 +106,13 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
         >
           Мої завдання
         </Button>
+        <Button 
+          variant="outlined"
+          onClick={() => setRecommendationsModalOpen(true)}
+          disabled={tasks.length === 0}
+        >
+          Рекомендації
+        </Button>
       </Box>
 
       {(subjectsLoading || tasksLoading) && (
@@ -153,6 +162,17 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
         onDelete={handleDeleteTask}
         onToggleComplete={handleToggleComplete}
         loading={tasksLoading}
+      />
+
+      {/* Додано новий RecommendationsManager */}
+      <RecommendationsManager
+        open={recommendationsModalOpen}
+        onClose={() => setRecommendationsModalOpen(false)}
+        tasks={tasks.filter(task => !task.is_completed)} // Тільки активні завдання
+        subjects={subjects}
+        onUpdate={updateTask}
+        onDelete={handleDeleteTask}
+        onToggleComplete={handleToggleComplete}
       />
 
       <Snackbar

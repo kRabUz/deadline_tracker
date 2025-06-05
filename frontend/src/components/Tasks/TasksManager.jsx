@@ -94,6 +94,7 @@ export const TasksManager = ({
               setIsViewOpen(true);
             }}
             onToggleComplete={onToggleComplete}
+            enableSorting={true}
           />
         </DialogContent>
         <DialogActions>

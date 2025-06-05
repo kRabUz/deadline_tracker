@@ -4,13 +4,17 @@ import {
   createTask, 
   updateTask, 
   deleteTask,
-  toggleTaskStatus
+  toggleTaskStatus,
+  getRecommendations
 } from '../services/taskService';
 
 export const useTasks = (initialTasks = [], onUpdate) => {
   const [tasks, setTasks] = useState(initialTasks);
+  const [RecommendationsResults, setRecommendationsResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [RecommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [RecommendationsError, setRecommendationsError] = useState(null);
 
   useEffect(() => {
     setTasks(initialTasks);
@@ -25,6 +29,21 @@ export const useTasks = (initialTasks = [], onUpdate) => {
       setError(err);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const loadRecommendations = useCallback(async (weights, directions) => {
+    try {
+      setRecommendationsLoading(true);
+      setRecommendationsError(null);
+      const data = await getRecommendations(weights, directions);
+      setRecommendationsResults(data);
+      return data;
+    } catch (err) {
+      setRecommendationsError(err);
+      throw err;
+    } finally {
+      setRecommendationsLoading(false);
     }
   }, []);
 
@@ -74,12 +93,17 @@ export const useTasks = (initialTasks = [], onUpdate) => {
 
   return {
     tasks,
+    RecommendationsResults,
     loading,
+    RecommendationsLoading,
     error,
+    RecommendationsError,
     loadTasks,
+    loadRecommendations,
     createTask: handleCreate,
     updateTask: handleUpdate,
     deleteTask: handleDelete,
-    toggleTaskStatus: handleToggleComplete
+    toggleTaskStatus: handleToggleComplete,
+    resetRecommendationsResults: () => setRecommendationsResults(null)
   };
 };

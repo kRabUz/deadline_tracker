@@ -67,7 +67,7 @@ export const TaskForm = ({
         <DialogContent>
           <Box sx={{ mb: 1 }}>
             <TextField
-              label="Назва завдання *"
+              label="Назва завдання"
               fullWidth
               value={formData.task_name}
               onChange={(e) => setFormData({...formData, task_name: e.target.value})}
@@ -84,7 +84,7 @@ export const TaskForm = ({
                 value={formData.subject_id}
                 onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
                 disabled={subjects.length === 0}
-                label="Предмет *"
+                label="Предмет"
               >
                 {subjects.map((subject) => (
                   <MenuItem key={subject.id} value={subject.id}>
@@ -126,7 +126,7 @@ export const TaskForm = ({
 
           <Box sx={{ mb: 1 }}>
             <DesktopDatePicker
-              label="Дедлайн *"
+              label="Дедлайн"
               value={formData.deadline}
               onChange={(newValue) => setFormData({...formData, deadline: newValue || new Date()})}
               renderInput={(params) => (
