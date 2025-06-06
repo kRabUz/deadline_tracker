@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { 
   Box, Typography, Button, CircularProgress, Alert, 
   Snackbar, Tabs, Tab 
@@ -9,14 +9,16 @@ import { useTasks } from '../hooks/useTasks';
 import { useSubjects } from '../hooks/useSubjects';
 import { SubjectsManager } from '../components/Subjects/SubjectsManager';
 import { TasksManager } from '../components/Tasks/TasksManager';
-import { RecommendationsManager } from '../components/Tasks/RecommendationsManager'; // Імпортуємо новий компонент
+import { RecommendationsManager } from '../components/Tasks/RecommendationsManager';
+import { RemindersManager } from '../components/Tasks/RemindersManager';
 
 export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate, onSubjectUpdate }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [error, setError] = useState('');
   const [subjectsModalOpen, setSubjectsModalOpen] = useState(false);
   const [tasksModalOpen, setTasksModalOpen] = useState(false);
-  const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false); // Новий стан для Recommendations
+  const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
+  const [remindersOpen, setRemindersOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
   // Subjects
@@ -30,7 +32,7 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
     loadSubjects
   } = useSubjects(initialSubjects, onSubjectUpdate);
 
-  // Tasks with toggle complete functionality
+  // Tasks
   const {
     tasks,
     loading: tasksLoading,
@@ -42,11 +44,29 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
     loadTasks
   } = useTasks(initialTasks, onTaskUpdate);
 
+  // Фільтрація нагадувань
+  const reminderTasks = useMemo(() => {
+    const now = new Date();
+    return tasks.filter(task => {
+      if (task.is_completed) return false;
+
+      const deadline = new Date(task.deadline);
+      const hoursUntilDeadline = (deadline - now) / (1000 * 60 * 60);
+
+      let reminderHours = 24; // Базовий час
+      if (task.difficulty === "Medium") reminderHours += 24;
+      if (task.difficulty === "Hard") reminderHours += 48;
+      if (task.priority === "High") reminderHours += 48;
+
+      return hoursUntilDeadline <= reminderHours;
+    });
+  }, [tasks]);
+
   const handleDeleteSubject = useCallback(async (id) => {
     try {
       await deleteSubject(id);
       setSnackbar({ open: true, message: 'Предмет успішно видалено' });
-      loadTasks(); // Refresh tasks after subject deletion
+      loadTasks();
     } catch (err) {
       setError(`Помилка при видаленні предмету: ${err.response?.data?.error || err.message}`);
     }
@@ -113,6 +133,25 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
         >
           Рекомендації
         </Button>
+        <Button 
+          variant="outlined"
+          onClick={() => setRemindersOpen(true)}
+          disabled={tasks.length === 0}
+          sx={{ position: 'relative' }}
+        >
+          Нагадування
+          {reminderTasks.length > 0 && (
+            <Box sx={{
+              position: 'absolute',
+              top: -5,
+              right: -5,
+              width: 16,
+              height: 16,
+              bgcolor: 'red',
+              borderRadius: '50%'
+            }} />
+          )}
+        </Button>
       </Box>
 
       {(subjectsLoading || tasksLoading) && (
@@ -164,11 +203,20 @@ export const HomePage = ({ initialTasks = [], initialSubjects = [], onTaskUpdate
         loading={tasksLoading}
       />
 
-      {/* Додано новий RecommendationsManager */}
       <RecommendationsManager
         open={recommendationsModalOpen}
         onClose={() => setRecommendationsModalOpen(false)}
-        tasks={tasks.filter(task => !task.is_completed)} // Тільки активні завдання
+        tasks={tasks.filter(task => !task.is_completed)}
+        subjects={subjects}
+        onUpdate={updateTask}
+        onDelete={handleDeleteTask}
+        onToggleComplete={handleToggleComplete}
+      />
+
+      <RemindersManager
+        open={remindersOpen}
+        onClose={() => setRemindersOpen(false)}
+        tasks={reminderTasks}
         subjects={subjects}
         onUpdate={updateTask}
         onDelete={handleDeleteTask}
