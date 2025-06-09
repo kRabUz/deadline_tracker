@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -70,20 +70,33 @@ export const RecommendationsManager = ({
   const [recommendationsResults, setRecommendationsResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
 
+  // Завантажуємо збережені налаштування
   useEffect(() => {
     const savedWeights = localStorage.getItem('recommendationsWeights');
+    const savedEasyFirst = localStorage.getItem('recommendationsEasyFirst');
+    
     if (savedWeights) {
       setWeights(JSON.parse(savedWeights));
     }
+    if (savedEasyFirst) {
+      setShowEasyFirst(JSON.parse(savedEasyFirst));
+    }
   }, []);
 
+  // Зберігаємо налаштування
   useEffect(() => {
     localStorage.setItem('recommendationsWeights', JSON.stringify(weights));
-  }, [weights]);
+    localStorage.setItem('recommendationsEasyFirst', JSON.stringify(showEasyFirst));
+  }, [weights, showEasyFirst]);
 
-  const fetchRecommendationsResults = async () => {
-    if (!open || tasks.length === 0) return;
+  // Отримання рекомендацій
+  const fetchRecommendationsResults = useCallback(async () => {
+    if (!open || tasks.length === 0) {
+      setRecommendationsResults([]);
+      return;
+    }
     
     setLoading(true);
     setError(null);
@@ -98,28 +111,55 @@ export const RecommendationsManager = ({
         ['max', showEasyFirst ? 'min' : 'max', 'min']
       );
       
-      setRecommendationsResults(results.tasks);
+      setRecommendationsResults(results.tasks || []);
     } catch (err) {
-      setError(err.message || 'Помилка при отриманні рекомендацій');
+      console.error('Recommendations error:', err);
+      setError(err.response?.data?.error || err.message || 'Помилка при отриманні рекомендацій');
+      setRecommendationsResults([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchRecommendationsResults();
   }, [open, tasks, weights, showEasyFirst]);
 
-  const handleSubmit = (taskData) => {
-    if (currentTask) {
-      onUpdate(currentTask.id, taskData);
+  // Автоматичне оновлення рекомендацій
+  useEffect(() => {
+    if (open) {
+      fetchRecommendationsResults();
     }
-    setIsFormOpen(false);
+  }, [open, fetchRecommendationsResults, lastUpdated]);
+
+  // Обробники подій
+  const handleSubmit = async (taskData) => {
+    try {
+      if (currentTask) {
+        await onUpdate(currentTask.id, taskData);
+        setLastUpdated(Date.now());
+      }
+    } catch (err) {
+      setError(err.message || 'Помилка при оновленні завдання');
+    } finally {
+      setIsFormOpen(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    onDelete(id);
-    setIsViewOpen(false);
+  const handleDelete = async (id) => {
+    try {
+      await onDelete(id);
+      setLastUpdated(Date.now());
+    } catch (err) {
+      setError(err.message || 'Помилка при видаленні завдання');
+    } finally {
+      setIsViewOpen(false);
+    }
+  };
+
+  const handleToggleCompleteWrapper = async (taskId, isCompleted) => {
+    try {
+      await onToggleComplete(taskId, isCompleted);
+      setLastUpdated(Date.now());
+    } catch (err) {
+      setError(err.message || 'Помилка при зміні статусу');
+    }
   };
 
   return (
@@ -182,7 +222,7 @@ export const RecommendationsManager = ({
               setIsFormOpen(true);
             }}
             onDelete={handleDelete}
-            onToggleComplete={onToggleComplete}
+            onToggleComplete={handleToggleCompleteWrapper}
             showRecommendationsScores
             enableSorting={false}
           />
@@ -203,7 +243,7 @@ export const RecommendationsManager = ({
           setIsFormOpen(true);
         }}
         onDelete={handleDelete}
-        onToggleComplete={onToggleComplete}
+        onToggleComplete={handleToggleCompleteWrapper}
       />
 
       <TaskForm

@@ -1,26 +1,35 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from './hooks/useAuth';
 import { fetchTasks, fetchSubjects } from './services/api';
 import { AppRoutes } from './routes';
 
 function App() {
+  const { isAuthenticated, initialized } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [subjects, setSubjects] = useState([]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [tasksRes, subjectsRes] = await Promise.all([
-          fetchTasks(),
-          fetchSubjects()
-        ]);
-        setTasks(tasksRes.data);
-        setSubjects(subjectsRes.data);
-      } catch (err) {
-        console.error('Failed to load data:', err);
-      }
-    };
-    loadData();
-  }, []);
+    if (isAuthenticated) {
+      const loadData = async () => {
+        try {
+          const [tasksRes, subjectsRes] = await Promise.all([
+            fetchTasks(),
+            fetchSubjects()
+          ]);
+          setTasks(tasksRes.data || []);
+          setSubjects(subjectsRes.data || []);
+        } catch (err) {
+          console.error('Failed to load data:', err);
+          setTasks([]);
+          setSubjects([]);
+        }
+      };
+      loadData();
+    } else {
+      setTasks([]);
+      setSubjects([]);
+    }
+  }, [isAuthenticated]);
 
   const handleTaskUpdate = async () => {
     try {

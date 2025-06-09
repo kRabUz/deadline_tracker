@@ -3,46 +3,45 @@ version: '3.9'
 services:
   postgres:
     image: postgres:14.1-alpine
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: deadline_track
+    env_file:
+      - .env.postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: 
       context: ./backend
       dockerfile: Dockerfile
     image: deadline-track-backend
-    volumes:
-      - ./backend:/app
+    env_file:
+      - .env.backend
     ports:
       - "5000:5000"
-    environment:
-      DATABASE_URL: "postgresql://user:password@postgres:5432/deadline_track"
-      FLASK_DEBUG: "true"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     image: deadline-track-frontend
-    volumes:
-      - ./frontend/src:/app/src
-      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
     ports:
       - "3000:3000"
-    environment:
-      - REACT_APP_API_URL=http://backend:5000
     depends_on:
       - backend
     networks:

@@ -121,7 +121,7 @@ export const TaskViz = ({ tasks }) => {
     <Paper elevation={3} sx={{ 
       p: 3, 
       mb: 4,
-      width: '60%',
+      width: '70%',
       mx: 'auto',
       minWidth: 500
     }}>

@@ -2,13 +2,13 @@ import React, { useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import ukLocale from '@fullcalendar/core/locales/uk'; // Додаємо українську локаль
+import ukLocale from '@fullcalendar/core/locales/uk';
 import { useTheme, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { TaskViewModal, TaskForm } from '../components/Tasks';
 import { Button, Box, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTasks } from '../hooks/useTasks';
+import { Navigation } from '../components/Navigation';
 
 export const CalendarPage = ({ initialTasks = [], subjects = [], onTaskUpdate }) => {
   const theme = useTheme();
@@ -30,13 +30,13 @@ export const CalendarPage = ({ initialTasks = [], subjects = [], onTaskUpdate })
 
   const getPriorityColor = (priority, isCompleted) => {
     const baseColors = {
-      'High': '#f44336', // Яскраво-червоний
-      'Low': '#4caf50'   // Яскраво-зелений
+      'High': '#f44336',
+      'Low': '#4caf50'
     };
     
     const fadedColors = {
-      'High': '#ef9a9a', // Блідо-червоний
-      'Low': '#a5d6a7'   // Блідо-зелений
+      'High': '#ef9a9a',
+      'Low': '#a5d6a7'
     };
 
     return isCompleted ? fadedColors[priority] : baseColors[priority];
@@ -57,42 +57,42 @@ export const CalendarPage = ({ initialTasks = [], subjects = [], onTaskUpdate })
   }));
 
   const calendarStyles = `
-      .clickable-event {
-        cursor: pointer;
-        border: none;
-        font-weight: 500;
-        transition: all 0.2s;
-      }
-      .clickable-event:hover {
-        transform: scale(1.02);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      }
-      .completed-event {
-        opacity: 0.7;
-        position: relative;
-      }
-      .completed-event::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 50%;
-        height: 2px;
-        background: #ffffff;
-        transform: translateY(-50%);
-      }
-      .fc .fc-toolbar-title {
+    .clickable-event {
+      cursor: pointer;
+      border: none;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .clickable-event:hover {
+      transform: scale(1.02);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .completed-event {
+      opacity: 0.7;
+      position: relative;
+    }
+    .completed-event::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 2px;
+      background: #ffffff;
+      transform: translateY(-50%);
+    }
+    .fc .fc-toolbar-title {
       text-transform: capitalize;
-      }
-      .fc-col-header-cell {
-        text-transform: capitalize;
-      }
-      .fc-event-title {
-        display: inline-block;
-        position: relative;
-        z-index: 1;
-      }
-    `;
+    }
+    .fc-col-header-cell {
+      text-transform: capitalize;
+    }
+    .fc-event-title {
+      display: inline-block;
+      position: relative;
+      z-index: 1;
+    }
+  `;
 
   const handleEventClick = (clickInfo) => {
     setSelectedTask(clickInfo.event.extendedProps);
@@ -159,92 +159,88 @@ export const CalendarPage = ({ initialTasks = [], subjects = [], onTaskUpdate })
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <style>{calendarStyles}</style>
+    <>
+      <Navigation />
       
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate('/')}
-        sx={{ mb: 2 }}
-      >
-        На головну
-      </Button>
+      <Box sx={{ p: 3 }}>
+        <style>{calendarStyles}</style>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {typeof error === 'string' ? error : 'Сталася помилка'}
-        </Alert>
-      )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {typeof error === 'string' ? error : 'Сталася помилка'}
+          </Alert>
+        )}
 
-      <FullCalendar
-        ref={calendarRef}
-        plugins={[dayGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        events={events}
-        eventClick={handleEventClick}
-        headerToolbar={{
-          left: 'prev,next today',
-          center: 'title',
-          right: ''
-        }}
-        height="auto"
-        locales={[ukLocale]}
-        locale="uk"
-        buttonText={{
-          today: 'Сьогодні',
-          month: 'Місяць',
-          week: 'Тиждень',
-          day: 'День',
-          list: 'Список'
-        }}
-        titleFormat={{
-          month: 'long',
-          year: 'numeric'
-        }}
-        dayHeaderFormat={{
-          weekday: 'long'
-        }}
-      />
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[dayGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
+          events={events}
+          eventClick={handleEventClick}
+          headerToolbar={{
+            left: 'prev,next today',
+            center: 'title',
+            right: ''
+          }}
+          height="auto"
+          locales={[ukLocale]}
+          locale="uk"
+          buttonText={{
+            today: 'Сьогодні',
+            month: 'Місяць',
+            week: 'Тиждень',
+            day: 'День',
+            list: 'Список'
+          }}
+          titleFormat={{
+            month: 'long',
+            year: 'numeric'
+          }}
+          dayHeaderFormat={{
+            weekday: 'long'
+          }}
+        />
 
-      <TaskViewModal
-        open={viewModalOpen}
-        onClose={() => setViewModalOpen(false)}
-        task={selectedTask}
-        subjects={subjects}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onToggleComplete={handleToggleComplete}
-      />
-
-      {selectedTask && (
-        <TaskForm
-          open={editModalOpen}
-          onClose={() => setEditModalOpen(false)}
-          onSubmit={handleSubmitEdit}
+        <TaskViewModal
+          open={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
           task={selectedTask}
           subjects={subjects}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onToggleComplete={handleToggleComplete}
         />
-      )}
 
-      <Dialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-      >
-        <DialogTitle>Підтвердити видалення</DialogTitle>
-        <DialogContent>
-          Ви впевнені, що хочете видалити завдання "{selectedTask?.task_name}"?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Скасувати</Button>
-          <Button 
-            onClick={confirmDelete} 
-            color="error"
-            variant="contained"
-          >
-            Видалити
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        {selectedTask && (
+          <TaskForm
+            open={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            onSubmit={handleSubmitEdit}
+            task={selectedTask}
+            subjects={subjects}
+          />
+        )}
+
+        <Dialog
+          open={deleteConfirmOpen}
+          onClose={() => setDeleteConfirmOpen(false)}
+        >
+          <DialogTitle>Підтвердити видалення</DialogTitle>
+          <DialogContent>
+            Ви впевнені, що хочете видалити завдання "{selectedTask?.task_name}"?
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteConfirmOpen(false)}>Скасувати</Button>
+            <Button 
+              onClick={confirmDelete} 
+              color="error"
+              variant="contained"
+            >
+              Видалити
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </>
   );
 };
