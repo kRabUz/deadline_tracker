@@ -12,7 +12,7 @@ export const AuthPage = () => {
   };
 
   const handleAuthSuccess = () => {
-    navigate('/'); // Додаткове перенаправлення
+    navigate('/');
   };
 
   return (
@@ -25,7 +25,7 @@ export const AuthPage = () => {
     }}>
       <Paper elevation={3} sx={{ p: 4, width: 400 }}>
         <Typography variant="h4" align="center" gutterBottom>
-          Study Planner
+          Система управління завданнями
         </Typography>
         
         <Tabs value={tab} onChange={handleTabChange} centered>

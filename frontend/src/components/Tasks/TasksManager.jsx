@@ -29,7 +29,6 @@ export const TasksManager = ({
   const [currentTask, setCurrentTask] = useState(null);
   const [showAllTasks, setShowAllTasks] = useState(false);
 
-  // Фільтруємо завдання в залежності від стану чекбоксу
   const filteredTasks = showAllTasks 
     ? tasks 
     : tasks.filter(task => !task.is_completed);

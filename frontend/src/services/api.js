@@ -5,7 +5,6 @@ const api = axios.create({
   timeout: 5000,
 });
 
-// Додаємо токен до кожного запиту, якщо він є
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -14,7 +13,6 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Обробка помилок авторизації
 api.interceptors.response.use(response => {
   if (response.config.url === '/tasks' || response.config.url === '/subjects') {
     response.data = response.data || [];
@@ -45,7 +43,7 @@ export const createSubject = async (data) => {
       ...response,
       data: {
         id: response.data.id,
-        name: response.data.name || data.name // На випадок, якщо бекенд не повертає name
+        name: response.data.name || data.name
       }
     };
   } catch (error) {
@@ -61,7 +59,7 @@ export const updateSubject = async (id, data) => {
       ...response,
       data: {
         id: response.data.id,
-        name: response.data.name || data.name // Додаємо резервне значення
+        name: response.data.name || data.name
       }
     };
   } catch (error) {

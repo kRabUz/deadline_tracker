@@ -61,14 +61,12 @@ export const TaskViewModal = ({
     setIsUpdating(true);
     try {
       const newStatus = event.target.checked;
-      // Оптимістичне оновлення
       setLocalTask({
         ...localTask,
         is_completed: newStatus
       });
       await onToggleComplete(localTask.id, newStatus);
     } catch (error) {
-      // Відкат змін у разі помилки
       setLocalTask({
         ...localTask,
         is_completed: !event.target.checked

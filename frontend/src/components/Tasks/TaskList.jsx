@@ -98,7 +98,13 @@ export const TaskList = ({
     : tasks;
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('uk-UA');
+    if (!dateString || dateString === 'Invalid Date') return 'Завантаження...';
+    try {
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? 'Завантаження...' : date.toLocaleDateString('uk-UA');
+    } catch {
+      return 'Завантаження...';
+    }
   };
 
   return (

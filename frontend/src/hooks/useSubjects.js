@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'; // Додано useEffect
+import { useState, useEffect, useCallback } from 'react';
 import { 
   fetchSubjects, 
   createSubject, 
@@ -11,7 +11,6 @@ export const useSubjects = (initialSubjects = [], onUpdate) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Додано ефект для синхронізації стану
   useEffect(() => {
     setSubjects(initialSubjects);
   }, [initialSubjects]);

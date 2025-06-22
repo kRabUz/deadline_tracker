@@ -7,7 +7,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export const TaskViz = ({ tasks }) => {
   const theme = useTheme();
 
-  // Фільтруємо тільки невиконані завдання
   const filteredTasks = tasks.filter(task => !task.is_completed);
 
   const getToday = () => {
@@ -126,7 +125,7 @@ export const TaskViz = ({ tasks }) => {
       minWidth: 500
     }}>
       <Typography variant="h6" gutterBottom>
-        Розподіл невиконаних завдань
+        Візуалізація навантаження
       </Typography>
       
       <Box sx={{ 

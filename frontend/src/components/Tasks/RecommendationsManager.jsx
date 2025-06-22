@@ -72,7 +72,6 @@ export const RecommendationsManager = ({
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(Date.now());
 
-  // Завантажуємо збережені налаштування
   useEffect(() => {
     const savedWeights = localStorage.getItem('recommendationsWeights');
     const savedEasyFirst = localStorage.getItem('recommendationsEasyFirst');
@@ -85,13 +84,11 @@ export const RecommendationsManager = ({
     }
   }, []);
 
-  // Зберігаємо налаштування
   useEffect(() => {
     localStorage.setItem('recommendationsWeights', JSON.stringify(weights));
     localStorage.setItem('recommendationsEasyFirst', JSON.stringify(showEasyFirst));
   }, [weights, showEasyFirst]);
 
-  // Отримання рекомендацій
   const fetchRecommendationsResults = useCallback(async () => {
     if (!open || tasks.length === 0) {
       setRecommendationsResults([]);
@@ -121,14 +118,12 @@ export const RecommendationsManager = ({
     }
   }, [open, tasks, weights, showEasyFirst]);
 
-  // Автоматичне оновлення рекомендацій
   useEffect(() => {
     if (open) {
       fetchRecommendationsResults();
     }
   }, [open, fetchRecommendationsResults, lastUpdated]);
 
-  // Обробники подій
   const handleSubmit = async (taskData) => {
     try {
       if (currentTask) {

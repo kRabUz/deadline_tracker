@@ -15,14 +15,13 @@ export const SubjectViewModal = ({
 }) => {
   if (!subject) return null;
 
-  // Підрахунок кількості завдань для цього предмету
   const tasksCount = tasks.filter(task => task.subject_id === subject.id).length;
 
   return (
     <Dialog 
       open={open} 
       onClose={onClose} 
-      maxWidth="xs" // Зменшили максимальну ширину
+      maxWidth="xs"
       fullWidth
     >
       <DialogTitle sx={{ 
